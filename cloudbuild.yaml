@@ -1,0 +1,23 @@
+steps:
+  # STEP 1: Run the API Extractor and drop the processed file into the GCS Data Lake
+  - name: 'python:3.11-slim'
+    id: 'Phase 1 and 2 - Fetch API and Upload to GCS Lake'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir requests pandas google-cloud-storage
+        python fetch_and_lake.py
+
+  # STEP 2: Ingest the data from the Lake into Staging and run the Warehouse Merges
+  - name: 'python:3.11-slim'
+    id: 'Phase 3 - Ingest Staging and Merge SCD Type 2 Production'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir google-cloud-storage google-cloud-bigquery
+        python process_pipeline.py daily_refresh_data.csv
+
+options:
+  logging: CLOUD_LOGGING_ONLY
