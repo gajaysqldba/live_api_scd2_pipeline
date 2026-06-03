@@ -1,14 +1,21 @@
+#Impoer the os library to use in our code
 import os
+# Import the requests libraru to use in the for fetching recoreds from API
 import requests
+#Import the pandas as pd (giving the alias name) to use in the transformation of data
 import pandas as pd
+#Import the date and the timezone
 from datetime import datetime, timezone
+#Import the storage for the GCP storage
 from google.cloud import storage
 
-# Configurations
+
+# Configurations - These are the varables for the configuration that we are defining to use the variables for these in the code
 API_URL = "https://jsonplaceholder.typicode.com/users"
 LOCAL_CSV_PATH = "extracted_users.csv"
 BUCKET_NAME = "gajay-customer-pipeline-data"
 PROJECT_ID = "bqdemo-496217"
+
 
 def fetch_api_data():
     """Fetch raw JSON data from the open-source API endpoint."""
