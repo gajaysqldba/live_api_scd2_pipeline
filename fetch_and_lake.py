@@ -16,33 +16,43 @@ LOCAL_CSV_PATH = "extracted_users.csv"
 BUCKET_NAME = "gajay-customer-pipeline-data"
 PROJECT_ID = "bqdemo-496217"
 
-
+#Function to fetch the api data
 def fetch_api_data():
     """Fetch raw JSON data from the open-source API endpoint."""
     print(f"🌐 Connecting to public API: {API_URL}...")
+    #Using the method of .get() form requests library to connect and get the data and assigning it to the varailble response
     response = requests.get(API_URL)
+    #Using the conditional statement to check if the website is up by verifying the response code 200
     if response.status_code == 200:
         print("✅ Raw JSON successfully downloaded!")
+        #If the status code is 200 then returning the response and converting .json format to the python dictonary 
         return response.json()
+    #If the status code is not 200 then it will fail to fetch the data
     else:
         print(f"❌ Failed to fetch data. Status Code: {response.status_code}")
         return None
 
+#Defining another function to transform the data
 def transform_json_to_csv(json_data):
     """Flatten JSON structural layers and inject ingestion metadata timestamps."""
     print("🧠 Flattening JSON structural layers into columns...")
+    #Formatting the dictnory of python to the dataframe in pandas
     df = pd.DataFrame(json_data)
     
     # Extract company name to serve as our subscription tier element
     df['subscription_tier'] = df['company'].apply(lambda x: x['name'] if isinstance(x, dict) else 'Standard')
     
     # Isolate and rename target columns
+    #Filtering the reuired columns in the dataframe using double[[]](square brackets) and making a copy using .copy() in the memory of those filtered columns
     df = df[['id', 'name', 'email', 'subscription_tier']].copy()
+    #Renaming usning rename method and is doing it inplace
     df.rename(columns={'id': 'customer_id'}, inplace=True)
     
     # Explicitly inject the pipeline timestamp format
+    #using the datetime library to ingest the last_updated column for every row
     df['row_last_updated'] = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-    
+
+    #converting the dataframe to csv and storing it to the local csv path and ingnoring the index(built in feature of pandas)
     df.to_csv(LOCAL_CSV_PATH, index=False)
     print(f"💾 Cleaned data saved locally to: {LOCAL_CSV_PATH}")
 
