@@ -8,6 +8,8 @@ import pandas as pd
 from datetime import datetime, timezone
 #Import the storage for the GCP storage
 from google.cloud import storage
+from notifier import send_pipeline_alert
+
 
 
 # Configurations - These are the varables for the configuration that we are defining to use the variables for these in the code
@@ -71,7 +73,26 @@ def upload_to_gcs_lake():
         os.remove(LOCAL_CSV_PATH)
 
 if __name__ == "__main__":
-    raw_records = fetch_api_data()
-    if raw_records:
-        transform_json_to_csv(raw_records)
-        upload_to_gcs_lake()
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    try:
+        raw_records = fetch_api_data()
+        if raw_records:
+            transform_json_to_csv(raw_records)
+            upload_to_gcs_lake()
+            
+            # 🟢 SUCCESS EMAIL
+            send_pipeline_alert(
+                subject=f"🟢 Cloud Build Step 1 SUCCESS: Extraction Run {today}",
+                body=f"Phase 1 and 2 completed perfectly.\nRaw API users flattened and streamed to gs://{BUCKET_NAME}/landing_zone/daily_refresh_data.csv"
+            )
+        else:
+            raise Exception("API returned an empty data payload or non-200 response code.")
+            
+    except Exception as e:
+        # 🔴 FAILURE EMAIL
+        send_pipeline_alert(
+            subject=f"🔴 Cloud Build Step 1 CRITICAL FAILURE: Extraction Run {today}",
+            body=f"The pipeline crashed during the extraction/lake landing sequence.\n\nError Traceback:\n{e}"
+        )
+        # CRITICAL: Re-raise the exception so Cloud Build knows Step 1 failed and stops execution!
+        raise

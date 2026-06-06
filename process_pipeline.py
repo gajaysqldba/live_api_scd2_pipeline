@@ -1,5 +1,8 @@
 import sys
 from google.cloud import bigquery
+from datetime import datetime
+from notifier import send_pipeline_alert
+
 
 # Project Configuration
 PROJECT_ID = "bqdemo-496217"  
@@ -70,11 +73,30 @@ def run_scd_type2_merge():
     print("🚀 SCD Type 2 process complete. Production table updated successfully.")
 
 if __name__ == "__main__":
+    today = datetime.today().strftime('%Y-%m-%d')
+    
     if len(sys.argv) < 2:
         print("❌ Error: Missing filename argument.")
-        print("💡 Usage: python scd2_pipeline.py customers_batch_20260606.csv")
         sys.exit(1)
         
     target_file = sys.argv[1]
-    load_csv_to_staging(target_file)
-    run_scd_type2_merge()
+    
+    try:
+        print(f"🚀 Triggering BigQuery Processing Engine for {target_file}...")
+        load_csv_to_staging(target_file)
+        run_scd_type2_merge()
+        
+        # 🟢 SUCCESS EMAIL
+        send_pipeline_alert(
+            subject=f"🟢 Cloud Build Step 2 SUCCESS: Warehouse Merge Run {today}",
+            body=f"Phase 3 completed perfectly.\nStaging table '{STAGING_TABLE}' loaded and merged atomically into production tracking schema '{PROD_TABLE}' via SCD Type 2."
+        )
+        
+    except Exception as e:
+        # 🔴 FAILURE EMAIL
+        send_pipeline_alert(
+            subject=f"🔴 Cloud Build Step 2 CRITICAL FAILURE: Warehouse Merge Run {today}",
+            body=f"The pipeline crashed during BigQuery loading or SCD Type 2 transaction compilation.\n\nError Log:\n{e}"
+        )
+        # Re-raise the exception to alert Cloud Build of the block failure
+        raise
